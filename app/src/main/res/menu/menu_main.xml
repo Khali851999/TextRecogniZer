@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/camera"
+        android:icon="@drawable/camera"
+        android:title="Camera"
+        android:visible="true"
+        app:showAsAction="always"></item>
+    <item
+        android:id="@+id/gallery"
+        android:icon="@drawable/gallery"
+        android:title="Gallery"
+        android:visible="true"
+        app:showAsAction="always"></item>
+</menu>
