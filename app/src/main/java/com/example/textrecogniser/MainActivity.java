@@ -20,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -27,6 +28,8 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentTextRecognizer;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 import com.google.firebase.ml.vision.text.RecognizedLanguage;
@@ -34,6 +37,7 @@ import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,11 +46,13 @@ public class MainActivity extends AppCompatActivity {
 
     ImageView imageView;
     Button processButton;
+    TextView processedTextView;
     Bitmap bitmap;
     Uri resultUri;
     public static final int PERMISSION_CODE = 1111;
     Uri imageUri;
     public static final String TAG = "MainActivity";
+    ArrayList<String> processedText = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
 //
         imageView = findViewById(R.id.imageView);
         processButton = findViewById(R.id.processImage);
+        processedTextView = findViewById(R.id.processedTextView);
 
         String[] PERMISSIONS = {
                 Manifest.permission.CAMERA,
@@ -86,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                                     public void onSuccess(FirebaseVisionText firebaseVisionText) {
                                         processButton.setEnabled(true);
                                         processTextRecognitionResult(firebaseVisionText);
+                                        processedTextView.setText(processedText+"");
                                     }
                                 })
                                 .addOnFailureListener(
@@ -97,65 +105,15 @@ public class MainActivity extends AppCompatActivity {
                                                 e.getStackTrace();
                                             }
                                         });
-
             }
+
         });
+
+
     }
 
-//    public void processTextRecognitionResults(FirebaseVisionText firebaseVisionText) {
-//
-//        List<FirebaseVisionText.TextBlock> blocks = firebaseVisionText.getTextBlocks();
-//        if (blocks.size() == 0) {
-//            Toast.makeText(this, "No Text Found", Toast.LENGTH_SHORT).show();
-//            return;
-//        } else {
-//            String resultText = firebaseVisionText.getText();
-//            Log.d(TAG, "processTextRecognitionResults: resultText" + resultText);
-//            for (FirebaseVisionText.TextBlock block : firebaseVisionText.getTextBlocks()) {
-//                String blockText = block.getText();
-//                Float blockConfidence = block.getConfidence();
-//                List<RecognizedLanguage> blockLanguages = block.getRecognizedLanguages();
-//                Point[] blockCornerPoints = block.getCornerPoints();
-//                Rect blockFrame = block.getBoundingBox();
-//
-//                Log.d(TAG, "processTextRecognitionResults: blockText" + blockText);
-//                Log.d(TAG, "processTextRecognitionResults: blockConfidence" + blockConfidence);
-//                Log.d(TAG, "processTextRecognitionResults: blockLanguages" + blockLanguages);
-//                Log.d(TAG, "processTextRecognitionResults: blockCornerPoints" + blockCornerPoints);
-//                Log.d(TAG, "processTextRecognitionResults: blockFrame" + blockFrame);
-//
-//                for (FirebaseVisionText.Line line : block.getLines()) {
-//                    String lineText = line.getText();
-//                    Float lineConfidence = line.getConfidence();
-//                    List<RecognizedLanguage> lineLanguages = line.getRecognizedLanguages();
-//                    Point[] lineCornerPoints = line.getCornerPoints();
-//                    Rect lineFrame = line.getBoundingBox();
-//
-//                    Log.d(TAG, "processTextRecognitionResults2: lineText" + lineText);
-//                    Log.d(TAG, "processTextRecognitionResults2: lineConfidence" + lineConfidence);
-//                    Log.d(TAG, "processTextRecognitionResults2: lineLanguages" + lineLanguages);
-//                    Log.d(TAG, "processTextRecognitionResults2: lineCornerPoints" + lineCornerPoints);
-//                    Log.d(TAG, "processTextRecognitionResults2: lineFrame" + lineFrame);
-//
-//                    for (FirebaseVisionText.Element element : line.getElements()) {
-//                        String elementText = element.getText();
-//                        Float elementConfidence = element.getConfidence();
-//                        List<RecognizedLanguage> elementLanguages = element.getRecognizedLanguages();
-//                        Point[] elementCornerPoints = element.getCornerPoints();
-//                        Rect elementFrame = element.getBoundingBox();
-//
-//                        Log.d(TAG, "processTextRecognitionResults2: elementText" + elementText);
-//                        Log.d(TAG, "processTextRecognitionResults2: elementConfidence" + elementConfidence);
-//                        Log.d(TAG, "processTextRecognitionResults2: elementLanguages" + elementLanguages);
-//                        Log.d(TAG, "processTextRecognitionResults2: elementCornerPoints" + elementCornerPoints);
-//                        Log.d(TAG, "processTextRecognitionResults2: elementFrame" + elementFrame);
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     private void processTextRecognitionResult(FirebaseVisionText texts) {
+        processedText.clear();
         List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
         if (blocks.size() == 0) {
             Toast.makeText(this, "No Text Found", Toast.LENGTH_SHORT).show();
@@ -167,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
                 List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
                 for (int k = 0; k < elements.size(); k++) {
                     Log.d(TAG, "processTextRecognitionResult: " + elements.get(k).getText());
+                    processedText.add(elements.get(k).getText());
                 }
             }
         }
