@@ -21,7 +21,6 @@ import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Layout;
@@ -35,7 +34,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -48,17 +46,13 @@ import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-
-    ActionBar actionBar;
 
     ImageView imageView;
     Button processButton;
@@ -66,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     Bitmap bitmap;
     Uri resultUri;
     public static final int PERMISSION_CODE = 1111;
-    Uri imageUri;
     public static final String TAG = "MainActivity";
     String processedText;
     MyView mv;
@@ -88,10 +81,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-//
-//        actionBar = this.getSupportActionBar();
-//        actionBar.setTitle("TextRecogniser");
-//
         imageView = findViewById(R.id.imageView);
         processButton = findViewById(R.id.processImage);
         processedTextView = findViewById(R.id.processedTextView);
