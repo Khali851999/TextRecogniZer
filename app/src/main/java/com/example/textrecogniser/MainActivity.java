@@ -11,7 +11,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Environment;
@@ -74,7 +73,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onInit(int i) {
                 if (i == TextToSpeech.SUCCESS) {
-                    tts.setLanguage(Locale.ENGLISH);
+//                    tts.setLanguage(Locale.ENGLISH);
+
 
                 }
 
@@ -103,38 +103,43 @@ public class MainActivity extends AppCompatActivity {
         processButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (bitmap != null) {
-                    FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
-                    FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
-                            .getOnDeviceTextRecognizer();
-
-                    processButton.setEnabled(false);
-                    Task<FirebaseVisionText> result =
-                            detector.processImage(firebaseVisionImage)
-                                    .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-                                        @Override
-                                        public void onSuccess(FirebaseVisionText firebaseVisionText) {
-                                            processButton.setEnabled(true);
-                                            processTextRecognitionResult(firebaseVisionText);
-                                            processedTextView.setText(processedText + "");
-                                        }
-                                    })
-                                    .addOnFailureListener(
-                                            new OnFailureListener() {
-                                                @Override
-                                                public void onFailure(@NonNull Exception e) {
-                                                    e.getMessage();
-                                                    e.getCause();
-                                                    e.getStackTrace();
-                                                }
-                                            });
-                } else {
-                    Toast.makeText(MainActivity.this, "Please select an image first", Toast.LENGTH_SHORT).show();
-                }
+                startTextRecognition();
             }
 
         });
 
+
+    }
+
+    public void startTextRecognition() {
+        if (bitmap != null) {
+            FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
+            FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
+                    .getOnDeviceTextRecognizer();
+
+            processButton.setEnabled(false);
+            Task<FirebaseVisionText> result =
+                    detector.processImage(firebaseVisionImage)
+                            .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                                @Override
+                                public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                                    processButton.setEnabled(true);
+                                    processTextRecognitionResult(firebaseVisionText);
+                                    processedTextView.setText(processedText + "");
+                                }
+                            })
+                            .addOnFailureListener(
+                                    new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            e.getMessage();
+                                            e.getCause();
+                                            e.getStackTrace();
+                                        }
+                                    });
+        } else {
+            Toast.makeText(MainActivity.this, "Please select an image first", Toast.LENGTH_SHORT).show();
+        }
 
     }
 
@@ -275,6 +280,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void ConvertTTS(String text) {
 
+        tts.setLanguage(new Locale("en-IN"));
+
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
 
@@ -362,12 +369,13 @@ public class MainActivity extends AppCompatActivity {
         editalert.show();
     }
 
-    private float getTextHeight(String text, Paint paint) {
-
-        Rect rect = new Rect();
-        paint.getTextBounds(text, 0, text.length(), rect);
-        return rect.height();
-    }
+//
+//    private float getTextHeight(String text, Paint paint) {
+//
+//        Rect rect = new Rect();
+//        paint.getTextBounds(text, 0, text.length(), rect);
+//        return rect.height();
+//    }
 
     public void SaveAsPng() {
         android.support.v7.app.AlertDialog.Builder editalert = new android.support.v7.app.AlertDialog.Builder(MainActivity.this);
