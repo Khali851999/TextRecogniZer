@@ -7,10 +7,24 @@
         android:title="Camera"
         android:visible="true"
         app:showAsAction="always"></item>
+
     <item
-        android:id="@+id/gallery"
-        android:icon="@drawable/gallery"
-        android:title="Gallery"
+        android:id="@+id/pdf"
+        android:icon="@drawable/pdf"
+        android:title="Save as PDF"
+        android:visible="true"
+        app:showAsAction="always"></item>
+
+    <item
+        android:id="@+id/photo"
+        android:icon="@drawable/photo"
+        android:title="Save as PNG"
+        android:visible="true"
+        app:showAsAction="always"></item>
+    <item
+        android:id="@+id/tts"
+        android:icon="@drawable/tts"
+        android:title="TextToSpeech"
         android:visible="true"
         app:showAsAction="always"></item>
 </menu>

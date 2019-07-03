@@ -2,24 +2,39 @@ package com.example.textrecogniser;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,17 +43,18 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
-import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText;
-import com.google.firebase.ml.vision.document.FirebaseVisionDocumentTextRecognizer;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
-import com.google.firebase.ml.vision.text.RecognizedLanguage;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.OutputStream;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,18 +62,32 @@ public class MainActivity extends AppCompatActivity {
 
     ImageView imageView;
     Button processButton;
-    TextView processedTextView;
+    EditText processedTextView;
     Bitmap bitmap;
     Uri resultUri;
     public static final int PERMISSION_CODE = 1111;
     Uri imageUri;
     public static final String TAG = "MainActivity";
-    ArrayList<String> processedText = new ArrayList<>();
+    String processedText;
+    MyView mv;
+    TextToSpeech tts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        tts = new TextToSpeech(this, new OnInitListener() {
+            @Override
+            public void onInit(int i) {
+                if (i == TextToSpeech.SUCCESS) {
+                    tts.setLanguage(Locale.ENGLISH);
+
+                }
+
+            }
+        });
+
 //
 //        actionBar = this.getSupportActionBar();
 //        actionBar.setTitle("TextRecogniser");
@@ -65,6 +95,9 @@ public class MainActivity extends AppCompatActivity {
         imageView = findViewById(R.id.imageView);
         processButton = findViewById(R.id.processImage);
         processedTextView = findViewById(R.id.processedTextView);
+
+        mv = new MyView(this);
+        mv.setDrawingCacheEnabled(true);
 
         String[] PERMISSIONS = {
                 Manifest.permission.CAMERA,
@@ -81,30 +114,34 @@ public class MainActivity extends AppCompatActivity {
         processButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
-                FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
-                        .getOnDeviceTextRecognizer();
+                if (bitmap != null) {
+                    FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
+                    FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
+                            .getOnDeviceTextRecognizer();
 
-                processButton.setEnabled(false);
-                Task<FirebaseVisionText> result =
-                        detector.processImage(firebaseVisionImage)
-                                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-                                    @Override
-                                    public void onSuccess(FirebaseVisionText firebaseVisionText) {
-                                        processButton.setEnabled(true);
-                                        processTextRecognitionResult(firebaseVisionText);
-                                        processedTextView.setText(processedText+"");
-                                    }
-                                })
-                                .addOnFailureListener(
-                                        new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                e.getMessage();
-                                                e.getCause();
-                                                e.getStackTrace();
-                                            }
-                                        });
+                    processButton.setEnabled(false);
+                    Task<FirebaseVisionText> result =
+                            detector.processImage(firebaseVisionImage)
+                                    .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                                        @Override
+                                        public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                                            processButton.setEnabled(true);
+                                            processTextRecognitionResult(firebaseVisionText);
+                                            processedTextView.setText(processedText + "");
+                                        }
+                                    })
+                                    .addOnFailureListener(
+                                            new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    e.getMessage();
+                                                    e.getCause();
+                                                    e.getStackTrace();
+                                                }
+                                            });
+                } else {
+                    Toast.makeText(MainActivity.this, "Please select an image first", Toast.LENGTH_SHORT).show();
+                }
             }
 
         });
@@ -113,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void processTextRecognitionResult(FirebaseVisionText texts) {
-        processedText.clear();
+        processedText = "";
         List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
         if (blocks.size() == 0) {
             Toast.makeText(this, "No Text Found", Toast.LENGTH_SHORT).show();
@@ -121,11 +158,12 @@ public class MainActivity extends AppCompatActivity {
         }
         for (int i = 0; i < blocks.size(); i++) {
             List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
+            processedText += "\n";
             for (int j = 0; j < lines.size(); j++) {
                 List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
                 for (int k = 0; k < elements.size(); k++) {
                     Log.d(TAG, "processTextRecognitionResult: " + elements.get(k).getText());
-                    processedText.add(elements.get(k).getText());
+                    processedText += elements.get(k).getText() + " ";
                 }
             }
         }
@@ -191,13 +229,21 @@ public class MainActivity extends AppCompatActivity {
                     .setGuidelines(CropImageView.Guidelines.ON)
                     .start(this);
         }
-        if (item.getItemId() == R.id.gallery) {
-
-//            Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-//            startActivityForResult(Intent.createChooser(galleryIntent, "Select Image from"), GALLERY_REQUEST);
-
-            CropImage.activity(imageUri)
-                    .start(this);
+//        if (item.getItemId() == R.id.gallery) {
+//
+////            Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+////            startActivityForResult(Intent.createChooser(galleryIntent, "Select Image from"), GALLERY_REQUEST);
+//            CropImage.activity(imageUri)
+//                    .start(this);
+//        }
+        if (item.getItemId() == R.id.pdf) {
+            SaveAsPdf();
+        }
+        if (item.getItemId() == R.id.photo) {
+            SaveAsPng();
+        }
+        if (item.getItemId() == R.id.tts) {
+            ConvertTTS(processedText);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -238,6 +284,143 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //    }
 
+    public void ConvertTTS(String text) {
+
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+    }
+
+    private void SaveAsPdf() {
+        android.support.v7.app.AlertDialog.Builder editalert = new android.support.v7.app.AlertDialog.Builder(MainActivity.this);
+        editalert.setTitle("Please Enter the name with which you want to Save");
+        final EditText input = new EditText(MainActivity.this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT);
+        input.setLayoutParams(lp);
+        editalert.setView(input);
+        editalert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+                String name = input.getText().toString();
+                Log.d(TAG, "onClick: name" + name);
+
+
+                String finalText = processedTextView.getText().toString().trim();
+                // create a new document
+                PdfDocument document = new PdfDocument();
+                // crate a page description
+                PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(500, 1000, 5).create();
+                // start a page
+                PdfDocument.Page page = document.startPage(pageInfo);
+                Canvas canvas = page.getCanvas();
+
+                Paint paint = new Paint();
+                paint.setColor(Color.BLACK);
+                bitmap = Bitmap.createScaledBitmap(bitmap, 500, 500, true);
+                canvas.drawBitmap(bitmap, 0, 0, paint);
+
+                //Static layout which will be drawn on canvas
+                //textOnCanvas - text which will be drawn
+                //text paint - paint object
+                //bounds.width - width of the layout
+                //Layout.Alignment.ALIGN_CENTER - layout alignment
+                //1 - text spacing multiply
+                //1 - text spacing add
+                //true - include padding
+                TextPaint textPaint = new TextPaint();
+                textPaint.setColor(Color.BLACK);
+                canvas.translate(5, 550);
+                StaticLayout sl = new StaticLayout(finalText, textPaint, 480,
+                        Layout.Alignment.ALIGN_NORMAL, 2, 1, true);
+                canvas.save();
+//                float textHeight = getTextHeight(finalText, textPaint);
+//                int numberOfTextLines = sl.getLineCount();
+//                float textYCoordinate = bounds.exactCenterY() -
+//                        ((numberOfTextLines * textHeight) / 2);
+//
+//                //text will be drawn from left
+//                float textXCoordinate = bounds.left;
+//
+//                canvas.translate(textXCoordinate, textYCoordinate);
+
+                //draws static layout on canvas
+                sl.draw(canvas);
+                canvas.restore();
+
+
+                // finish the page
+                document.finishPage(page);
+                // write the document content
+                String directory_path = Environment.getExternalStorageDirectory().getPath() + "/mypdf/";
+                File file = new File(directory_path);
+                if (!file.exists()) {
+                    file.mkdirs();
+                }
+                String targetPdf = directory_path + "test-2.pdf";
+                File filePath = new File(targetPdf);
+                try {
+                    document.writeTo(new FileOutputStream(filePath));
+                    Toast.makeText(MainActivity.this, "Done", Toast.LENGTH_LONG).show();
+                } catch (IOException e) {
+                    Log.e("main", "error " + e.toString());
+                    Toast.makeText(MainActivity.this, "Something wrong: " + e.toString(), Toast.LENGTH_LONG).show();
+                }
+                // close the document
+                document.close();
+            }
+        });
+        editalert.show();
+    }
+
+    private float getTextHeight(String text, Paint paint) {
+
+        Rect rect = new Rect();
+        paint.getTextBounds(text, 0, text.length(), rect);
+        return rect.height();
+    }
+
+    public void SaveAsPng() {
+        android.support.v7.app.AlertDialog.Builder editalert = new android.support.v7.app.AlertDialog.Builder(MainActivity.this);
+        editalert.setTitle("Please Enter the name with which you want to Save");
+        final EditText input = new EditText(MainActivity.this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT);
+        input.setLayoutParams(lp);
+        editalert.setView(input);
+        editalert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+
+                String name = input.getText().toString();
+                Log.d(TAG, "onClick: name" + name);
+                Bitmap bitmap = mv.getDrawingCache();
+
+                String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+                File file = new File("/sdcard/" + name + ".png");
+                Log.d(TAG, "onClick: " + file);
+                try {
+                    if (!file.exists()) {
+                        file.createNewFile();
+                        Toast.makeText(MainActivity.this, "File created at" + path, Toast.LENGTH_SHORT).show();
+                    }
+                    FileOutputStream ostream = new FileOutputStream(file);
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 10, ostream);
+                    ostream.close();
+                    mv.invalidate();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+
+                    mv.setDrawingCacheEnabled(false);
+                }
+            }
+        });
+
+        editalert.show();
+
+    }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -259,39 +442,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    public void CropImage() {
-//        try {
-//
-//            Intent cropIntent = new Intent("com.android.camera.action.CROP");
-//
-//            cropIntent.setDataAndType(postImageUri, "image/*");
-//            cropIntent.putExtra("crop", "true");
-//            cropIntent.putExtra("aspectX", 3);
-//            cropIntent.putExtra("aspectY", 4);
-//            cropIntent.putExtra("outputX", 180);
-//            cropIntent.putExtra("outputY", 180);
-//            cropIntent.putExtra("return-data", 180);
-//            cropIntent.putExtra("scaleUpIfNeeded", true);
-//            startActivityForResult(cropIntent, CROP_PIC_REQUEST_CODE);
-//        }
-//        // respond to users whose devices do not support the crop action
-//        catch (ActivityNotFoundException e) {
-//            // display an error message
-////            String errorMessage = "";
-////            Toast toast = Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT);
-////            toast.show();
-//
-//            final AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
-//            alertDialog.setTitle("Device Error")
-//                    .setMessage("Whoops - your device doesn't support the crop action!")
-//                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialogInterface, int i) {
-//                        }
-//                    }).show();
-//        }
-//    }
+    public class MyView extends View {
 
+        private static final float MINP = 0.25f;
+        private static final float MAXP = 0.75f;
+        private Bitmap mBitmap;
+        private Canvas mCanvas;
+        private Path mPath;
+        private Paint mBitmapPaint;
+        Context context;
 
+        public MyView(Context c) {
+            super(c);
+            context = c;
+            mPath = new Path();
+            mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Don't forget to shutdown tts!
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+    }
 }
 
