@@ -2,6 +2,7 @@ package com.example.textrecogniser;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -63,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     String processedText;
     MyView mv;
     TextToSpeech tts;
+    ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,9 +77,7 @@ public class MainActivity extends AppCompatActivity {
                 if (i == TextToSpeech.SUCCESS) {
 //                    tts.setLanguage(Locale.ENGLISH);
 
-
                 }
-
             }
         });
 
@@ -99,47 +99,50 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED))) {
             requestPermissions(PERMISSIONS, PERMISSION_CODE);
         }
+        Context context;
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Running Text Recognition");
 
         processButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startTextRecognition();
+                if (bitmap != null) {
+                    startTextRecognition();
+                    progressDialog.show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Please select an image first", Toast.LENGTH_SHORT).show();
+                }
             }
 
         });
 
-
     }
 
     public void startTextRecognition() {
-        if (bitmap != null) {
-            FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
-            FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
-                    .getOnDeviceTextRecognizer();
 
-            processButton.setEnabled(false);
-            Task<FirebaseVisionText> result =
-                    detector.processImage(firebaseVisionImage)
-                            .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-                                @Override
-                                public void onSuccess(FirebaseVisionText firebaseVisionText) {
-                                    processButton.setEnabled(true);
-                                    processTextRecognitionResult(firebaseVisionText);
-                                    processedTextView.setText(processedText + "");
-                                }
-                            })
-                            .addOnFailureListener(
-                                    new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            e.getMessage();
-                                            e.getCause();
-                                            e.getStackTrace();
-                                        }
-                                    });
-        } else {
-            Toast.makeText(MainActivity.this, "Please select an image first", Toast.LENGTH_SHORT).show();
-        }
+        FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
+        FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
+                .getOnDeviceTextRecognizer();
+
+        processButton.setEnabled(false);
+        Task<FirebaseVisionText> result =
+                detector.processImage(firebaseVisionImage)
+                        .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                            @Override
+                            public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                                processButton.setEnabled(true);
+                                processTextRecognitionResult(firebaseVisionText);
+                            }
+                        })
+                        .addOnFailureListener(
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        e.getMessage();
+                                        e.getCause();
+                                        e.getStackTrace();
+                                    }
+                                });
 
     }
 
@@ -158,6 +161,10 @@ public class MainActivity extends AppCompatActivity {
                 for (int k = 0; k < elements.size(); k++) {
                     Log.d(TAG, "processTextRecognitionResult: " + elements.get(k).getText());
                     processedText += elements.get(k).getText() + " ";
+                    processedTextView.setText(processedText + "");
+                    progressDialog.dismiss();
+
+
                 }
             }
         }
@@ -237,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
             SaveAsPng();
         }
         if (item.getItemId() == R.id.tts) {
-            ConvertTTS(processedText);
+            tts.stop();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -278,23 +285,68 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //    }
 
-    public void ConvertTTS(String text) {
+    public void ChangeLanguage(View view) {
 
-        tts.setLanguage(new Locale("en-IN"));
+        switch (view.getId()) {
+            case R.id.EnglishUSLinearLayout:
+                startTextRecognition();
+                tts.setLanguage(new Locale("en-US"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.EnglishUKLinearLayout:
+
+                tts.setLanguage(new Locale("en-gb"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.EnglishINLinearLayout:
+
+                tts.setLanguage(new Locale("en-in"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.FrenchLinearLayout:
+
+                tts.setLanguage(new Locale("fr"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.ChineseLinearLayout:
+
+                tts.setLanguage(new Locale("zh-cn"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.GermanLinearLayout:
+
+                tts.setLanguage(new Locale("de"));
+                ConvertTTS(processedText);
+                break;
+            case R.id.SpanishLinearLayout:
+
+                tts.setLanguage(new Locale("es"));
+                ConvertTTS(processedText);
+                break;
+            default:
+
+                tts.setLanguage(new Locale("en-US"));
+                ConvertTTS(processedText);
+                break;
+
+        }
+    }
+
+    public void ConvertTTS(String text) {
 
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
 
     private void SaveAsPdf() {
-        android.support.v7.app.AlertDialog.Builder editalert = new android.support.v7.app.AlertDialog.Builder(MainActivity.this);
-        editalert.setTitle("Please Enter the name with which you want to Save");
+        android.support.v7.app.AlertDialog.Builder editAlert = new android.support.v7.app.AlertDialog.Builder(MainActivity.this);
+        editAlert.setTitle("Please Enter the name with which you want to Save");
         final EditText input = new EditText(MainActivity.this);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT);
         input.setLayoutParams(lp);
-        editalert.setView(input);
-        editalert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        editAlert.setView(input);
+        editAlert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
 
@@ -324,12 +376,14 @@ public class MainActivity extends AppCompatActivity {
                 //1 - text spacing multiply
                 //1 - text spacing add
                 //true - include padding
+
                 TextPaint textPaint = new TextPaint();
                 textPaint.setColor(Color.BLACK);
                 canvas.translate(5, 550);
                 StaticLayout sl = new StaticLayout(finalText, textPaint, 480,
                         Layout.Alignment.ALIGN_NORMAL, 2, 1, true);
                 canvas.save();
+
 //                float textHeight = getTextHeight(finalText, textPaint);
 //                int numberOfTextLines = sl.getLineCount();
 //                float textYCoordinate = bounds.exactCenterY() -
@@ -366,7 +420,7 @@ public class MainActivity extends AppCompatActivity {
                 document.close();
             }
         });
-        editalert.show();
+        editAlert.show();
     }
 
 //
@@ -438,6 +492,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
 
     public class MyView extends View {
 
