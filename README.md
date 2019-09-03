@@ -1,7 +1,7 @@
 # TextRecogniZer
 - **An app using Machine Learning runs a Text Recogniser Algorithm to read text from an image.**
 - **Use Images from Gallery or click a new one with Phone Camera**
-- **After clicking an Image, use our iamge editor feature to maximize the efficiency of algoithm by selecting the portion.**
+- **After clicking an Image, use our image editor feature to maximize the efficiency of algoithm by selecting the portion.**
 - **User can prefer to listen to their favourite books with an built in TextToSpeech fuction and also choose their prefered accent from:**
   - English US
   - English UK
